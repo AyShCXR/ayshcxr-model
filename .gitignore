@@ -1,0 +1,49 @@
+# Large image dataset — 45GB total
+images_001/
+images_002/
+images_003/
+images_004/
+images_005/
+images_006/
+images_007/
+images_008/
+images_009/
+images_010/
+images_011/
+images_012/
+
+# Model weight files — over 100MB each
+*.pth
+*.pt
+
+# Large data files
+nih_full_labels.csv
+nih_demo_labels.csv
+nih_clean_labels.csv
+nih_clean_labels.csv
+Data_Entry_2017.csv
+BBox_List_2017.csv
+val_predictions_*.csv
+
+# Training outputs
+efficientnet_training_history.csv
+training_history.csv
+
+# Generated image files
+patient_heatmap.png
+cam_overlay.png
+effusion_heatmap.png
+
+# Generated reports
+ayshcxr_report_*.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code settings
+.vscode/
+
+# PDF files
+*.pdf
