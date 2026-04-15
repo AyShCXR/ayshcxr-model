@@ -70,14 +70,15 @@ IMG_SIZE     = 380    # ← EfficientNet-B4 native resolution
 LR_HEAD      = 3e-5
 LR_BACKBONE  = 1e-5
 PATIENCE           = 8        # AUC checked every 3 epochs; effective ~24 epochs
-MIN_EPOCHS         = 20       # No early stopping before this epoch
+MIN_EPOCHS_SAVE    = 5        # Save best model from epoch 5 onwards (crash protection)
+MIN_EPOCHS_STOP    = 20       # No early stopping before this epoch
 VAL_SPLIT          = 0.08     # 3,440 more training images vs 0.12
 LABEL_SMOOTH       = 0.1
 USE_AMP            = True     # Mixed precision — 2-3x speed boost
 AUC_EVERY_N        = 3        # Compute AUC every 3 epochs
 CKPT_EVERY_N       = 5        # Save checkpoint every 5 epochs
 AUTO_RESUME        = True     # Auto-resume on non-interactive server
-ACCUMULATION_STEPS = 4        # Effective batch = BATCH_SIZE * 4 = 128
+ACCUMULATION_STEPS = 4        # Default; auto-adjusted by VRAM check → always targets effective batch ~128
 
 NIH_LABELS_CSV  = "nih_full_labels.csv"
 NIH_TRAIN_LIST  = "train_val_list.txt"
@@ -103,7 +104,7 @@ DISEASE_LOSS_WEIGHTS = {
     "Edema"             : 1.33,
     "Emphysema"         : 1.27,
     "Fibrosis"          : 1.56,
-    "Pleural Thickening": 1.10,   # recalculate after new CSV generated
+    "Pleural Thickening": 0.88,   # sqrt-inverse normalized from 3,385 positives
     "Hernia"            : 3.00,
 }
 
@@ -309,7 +310,7 @@ def train_loop(model, train_df, val_loader, device, optimizer, scheduler,
     print(f"   Architecture     : EfficientNet-B4 (19M parameters)")
     print(f"   Loss             : Focal Loss (gamma=2.0, alpha=0.75)")
     print(f"   Image size       : {IMG_SIZE}px (B4 native resolution)")
-    print(f"   Epochs           : {NUM_EPOCHS} max, patience={PATIENCE}")
+    print(f"   Epochs           : {NUM_EPOCHS} max, patience={PATIENCE} (stop after epoch {MIN_EPOCHS_STOP})")
     print(f"   Batch size       : {BATCH_SIZE}  (effective: {BATCH_SIZE * ACCUMULATION_STEPS})")
     print(f"   AMP              : {'enabled' if USE_AMP else 'disabled'}")
     print(f"   Resuming from    : epoch {start_epoch}, best AUC {best_auc:.4f}")
@@ -429,18 +430,18 @@ def train_loop(model, train_df, val_loader, device, optimizer, scheduler,
         if mean_auc > best_auc:
             best_auc       = mean_auc
             patience_count = 0
-            if epoch >= MIN_EPOCHS:
+            if epoch >= MIN_EPOCHS_SAVE:
                 if best_model_name and os.path.exists(best_model_name):
                     os.remove(best_model_name)
                 best_model_name = f"efficientnet_best_auc{mean_auc:.4f}_ep{epoch}.pth"
                 torch.save(model.state_dict(), best_model_name)
                 print(f"  ✅ Best model → {best_model_name}")
             else:
-                print(f"  ✅ AUC improved to {mean_auc:.4f} (model saving starts at epoch {MIN_EPOCHS})")
+                print(f"  ✅ AUC improved to {mean_auc:.4f} (model saving starts at epoch {MIN_EPOCHS_SAVE})")
         else:
             patience_count += 1
             print(f"  ⚠️  No improvement ({patience_count}/{PATIENCE}) | Best: {best_auc:.4f}")
-            if patience_count >= PATIENCE and epoch >= MIN_EPOCHS:
+            if patience_count >= PATIENCE and epoch >= MIN_EPOCHS_STOP:
                 print(f"\n🛑 Early stopping at epoch {epoch} | Best AUC: {best_auc:.4f}")
                 break
 
@@ -467,20 +468,29 @@ def main():
     device = get_device()
 
     # ── VRAM check — auto-adjust batch size ──────────────
-    global BATCH_SIZE
+    global BATCH_SIZE, ACCUMULATION_STEPS
     if torch.cuda.is_available():
         free_vram, total_vram = [x / 1024**3 for x in torch.cuda.mem_get_info(0)]
         print(f"   VRAM: {free_vram:.1f}GB free / {total_vram:.1f}GB total")
         if free_vram < 10:
-            BATCH_SIZE = 8
+            BATCH_SIZE         = 8
+            ACCUMULATION_STEPS = 16   # effective batch = 128
             print(f"⚠️  Low free VRAM — auto-reducing BATCH_SIZE to 8")
         elif free_vram < 16:
-            BATCH_SIZE = 16
+            BATCH_SIZE         = 16
+            ACCUMULATION_STEPS = 8    # effective batch = 128
         elif free_vram < 24:
-            BATCH_SIZE = 24
+            BATCH_SIZE         = 24
+            ACCUMULATION_STEPS = 5    # effective batch = 120 (~128)
+        elif free_vram < 28:
+            BATCH_SIZE         = 32
+            ACCUMULATION_STEPS = 4    # effective batch = 128
         else:
-            BATCH_SIZE = 32
-        print(f"✅ BATCH_SIZE set to {BATCH_SIZE}")
+            # 28GB+ (e.g. A100 32GB) — use full VRAM
+            BATCH_SIZE         = 64
+            ACCUMULATION_STEPS = 2    # effective batch = 128
+            print(f"✅ Large VRAM detected — upgrading to BATCH_SIZE=64")
+        print(f"✅ BATCH_SIZE={BATCH_SIZE} | ACCUMULATION_STEPS={ACCUMULATION_STEPS} | Effective batch={BATCH_SIZE * ACCUMULATION_STEPS}")
 
     nih_df = load_nih_data()
     if nih_df is None:
