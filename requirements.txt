@@ -1,19 +1,37 @@
-# AyShCXR — exact versions (HP Victus, RTX 4050, CUDA 12.4)
-# Install PyTorch first (CUDA build):
-#   pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-# Then install the rest:
+# AyShCXR — Python 3.13
+#
+# PyTorch must be installed FIRST, from its own index, or pip will fetch the
+# CPU-only build:
+#   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+#
+# Then:
 #   pip install -r requirements.txt
 
+# ── core inference ──────────────────────────────────────────────────────────
 torch==2.6.0
 torchvision==0.21.0
-torchaudio==2.6.0
-pandas==2.3.2
-numpy==2.3.2
-scikit-learn==1.8.0
-Pillow==11.3.0
-tqdm==4.67.1
-matplotlib==3.10.8
-opencv-python==4.13.0.92
-streamlit==1.49.1
-grad-cam==1.5.5
-iterative-stratification==0.1.9
+numpy>=2.0
+Pillow>=11.0
+opencv-python>=4.10
+
+# ── web application ─────────────────────────────────────────────────────────
+flask>=3.1
+
+# ── Rad-DINO (optional) ─────────────────────────────────────────────────────
+# Only needed if the ensemble includes chexpert_rad_dino_v1. Downloads the
+# backbone from HuggingFace on first run, so that run needs internet.
+# Omit it and the app loads the three CNNs and reports a degraded ensemble.
+transformers>=5.0
+
+# ── edge export (reports/export_onnx.py) ────────────────────────────────────
+onnx>=1.17
+onnxruntime>=1.20
+
+# ── data prep, evaluation, threshold tuning ─────────────────────────────────
+pandas>=2.2
+scikit-learn>=1.5
+tqdm>=4.66
+
+# ── training only (not needed to run the app) ───────────────────────────────
+# iterative-stratification==0.1.9    multilabel stratified splits
+# matplotlib>=3.9                    ROC curves and figures
