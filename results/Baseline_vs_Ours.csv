@@ -1,0 +1,5 @@
+Model,Role,3-fold AUC,+/- std,fold1,fold2,fold3,delta vs ref
+Rad-DINO (ours),Ours,0.8089,0.0003,0.8093,0.8086,0.8089,+0.0165
+DenseNet-121 + GMP+GAP (ours),Ours,0.7983,0.0010,0.7992,0.7969,0.7989,+0.0059
+EfficientNet-B4 + GMP+GAP (ours),Ours,0.7644,0.0013,0.7634,0.7662,0.7637,-0.0280
+"DenseNet-121 (CheXpert paper, Irvin & Rajpurkar 2019)",Reference,0.7924,0.0022,0.7950,0.7927,0.7896,-

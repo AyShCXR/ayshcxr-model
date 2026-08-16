@@ -1,0 +1,3 @@
+AyShCXR project root marker — do not delete.
+Scripts in subfolders locate the project root by searching upward
+for this file. Removing it breaks every relocated script.

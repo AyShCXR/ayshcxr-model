@@ -1,0 +1,89 @@
+# ── AyShCXR .gitignore ──────────────────────────────────────────────────────
+# The working directory is ~45GB. Almost all of that is datasets and model
+# weights, which do not belong in git. What IS committed: ~1.5MB of code, the
+# small JSON files the app needs at runtime, and the documentation.
+
+# ── Datasets (~44GB) ────────────────────────────────────────────────────────
+# NIH ChestX-ray14, downloaded separately — see docs/
+images_0*/
+data/vindr/
+data/*.csv
+data/*.npy
+data/*.txt
+*.tar
+*.zip
+
+# ── Model weights ───────────────────────────────────────────────────────────
+# 923MB of checkpoints. Too large for git and not redistributable under the
+# CheXpert / NIH data licences. Released separately if at all.
+models/
+*.pth
+*.pt
+*.onnx
+*.tflite
+
+# ── Environments ────────────────────────────────────────────────────────────
+.venv/
+.venv-app/
+venv/
+env/
+node_modules/
+package-lock.json
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── Generated outputs ───────────────────────────────────────────────────────
+results/*.npz
+results/chexpert_preds.npz
+data/test_cases/
+*.log
+nohup.out
+ayshcxr_report_*.txt
+
+# KEEP these — the app reads them at startup and will not work without them:
+#   results/calibration.json         per-disease temperature scaling
+#   results/disease_thresholds.json  per-finding decision thresholds
+#   results/finding_baselines.json   baselines for salience ranking
+!results/*.json
+
+# ── Secrets — never commit ──────────────────────────────────────────────────
+# GitHub is scraped for these within minutes of a push.
+kaggle.json
+.kaggle/
+*.pem
+*.key
+.env
+credentials*
+secrets*
+
+# ── Editor / OS ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Scratch ─────────────────────────────────────────────────────────────────
+_*.txt
+_*.png
+doc_backups/
+readme_upload/
+REORG_MANIFEST.csv
+
+# ── Archive — internal history, not for publication ─────────────────────────
+# archive/snapshot_2026-08-04/ is a frozen copy of the project as it was on
+# 4 Aug. Its app.py still contains claims later found to be false (an
+# arithmetically impossible AUC of 1.1257, and a "validated ablation" that was
+# label leakage). Those are documented in its DO_NOT_USE_README, but an
+# unmarked copy of false claims in a public repository is a liability.
+# It also carries ~40MB of duplicated label CSVs.
+archive/
+
+# ── Third-party PDFs ────────────────────────────────────────────────────────
+# Published papers by other authors — not ours to redistribute, and large.
+docs/*.pdf

@@ -1,0 +1,21 @@
+{
+ "model": "densenet121",
+ "temperatures": {
+  "Enlarged Cardiomediastinum": 0.40538847117794485,
+  "Cardiomegaly": 0.4442355889724311,
+  "Lung Opacity": 0.34711779448621555,
+  "Lung Lesion": 0.46365914786967416,
+  "Edema": 0.38596491228070173,
+  "Consolidation": 0.3665413533834586,
+  "Pneumonia": 0.3665413533834586,
+  "Atelectasis": 0.3665413533834586,
+  "Pneumothorax": 0.424812030075188,
+  "Pleural Effusion": 0.40538847117794485,
+  "Pleural Other": 0.46365914786967416,
+  "Fracture": 0.424812030075188,
+  "Support Devices": 0.34711779448621555,
+  "No Finding": 0.3665413533834586
+ },
+ "fitted_on": "validation split",
+ "n_val": 7856
+}

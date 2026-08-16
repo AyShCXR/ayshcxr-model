@@ -1,0 +1,15 @@
+disease,auc_with_symp,auc_no_symp,delta
+Atelectasis,0.9751,0.6492,0.3259
+Cardiomegaly,0.9858,0.6685,0.3173
+Effusion,0.9707,0.7485,0.2222
+Infiltration,0.9935,0.5617,0.4318
+Mass,0.9671,0.7363,0.2307
+Nodule,0.9336,0.7454,0.1881
+Pneumonia,0.9638,0.4573,0.5066
+Pneumothorax,0.9892,0.6703,0.3189
+Consolidation,0.9842,0.5244,0.4598
+Edema,0.979,0.6097,0.3693
+Emphysema,0.9932,0.7159,0.2773
+Fibrosis,0.9639,0.5798,0.3841
+Pleural Thickening,0.9246,0.5611,0.3636
+Hernia,0.9914,0.8709,0.1205

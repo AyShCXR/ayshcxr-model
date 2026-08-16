@@ -1,0 +1,125 @@
+{
+ "note": "detected = 95%-specificity point measured on 300 healthy NIH films; borderline = 80th percentile. Replaces F1-optimal thresholds, which gave 1.0 false diagnoses per healthy film.",
+ "basis": {
+  "Atelectasis": "measured",
+  "Cardiomegaly": "measured",
+  "Effusion": "measured",
+  "Pneumonia": "baseline",
+  "Pneumothorax": "measured",
+  "Consolidation": "measured",
+  "Edema": "baseline",
+  "Infiltration": "measured",
+  "Mass": "baseline",
+  "Nodule": "baseline",
+  "Emphysema": "baseline",
+  "Fibrosis": "measured",
+  "Pleural Thickening": "measured",
+  "Hernia": "baseline",
+  "Enlarged Cardiomediastinum": "baseline",
+  "Lung Opacity": "measured",
+  "Lung Lesion": "measured",
+  "Pleural Other": "baseline",
+  "Fracture": "baseline",
+  "Support Devices": "baseline",
+  "No Finding": "measured"
+ },
+ "thresholds": {
+  "Atelectasis": {
+   "detected": 0.3358,
+   "borderline": 0.1942,
+   "spec_target": 0.97
+  },
+  "Cardiomegaly": {
+   "detected": 0.3893,
+   "borderline": 0.1425,
+   "spec_target": 0.97
+  },
+  "Effusion": {
+   "detected": 0.4887,
+   "borderline": 0.3399,
+   "spec_target": 0.9
+  },
+  "Pneumonia": {
+   "detected": 0.0802,
+   "borderline": 0.0473,
+   "spec_target": 0.85
+  },
+  "Pneumothorax": {
+   "detected": 0.0949,
+   "borderline": 0.0535,
+   "spec_target": 0.85
+  },
+  "Consolidation": {
+   "detected": 0.1827,
+   "borderline": 0.075,
+   "spec_target": 0.9
+  },
+  "Edema": {
+   "detected": 0.2825,
+   "borderline": 0.1234,
+   "spec_target": 0.9
+  },
+  "Infiltration": {
+   "detected": 0.6421,
+   "borderline": 0.5552,
+   "spec_target": 0.97
+  },
+  "Mass": {
+   "detected": 0.5304,
+   "borderline": 0.4892,
+   "spec_target": 0.9
+  },
+  "Nodule": {
+   "detected": 0.5922,
+   "borderline": 0.5414,
+   "spec_target": 0.9
+  },
+  "Emphysema": {
+   "detected": 0.5573,
+   "borderline": 0.4539,
+   "spec_target": 0.97
+  },
+  "Fibrosis": {
+   "detected": 0.532,
+   "borderline": 0.443
+  },
+  "Pleural Thickening": {
+   "detected": 0.408,
+   "borderline": 0.408
+  },
+  "Hernia": {
+   "detected": 0.5597,
+   "borderline": 0.4327,
+   "spec_target": 0.995
+  },
+  "Enlarged Cardiomediastinum": {
+   "detected": 0.054,
+   "borderline": 0.032
+  },
+  "Lung Opacity": {
+   "detected": 0.293,
+   "borderline": 0.229
+  },
+  "Lung Lesion": {
+   "detected": 0.388,
+   "borderline": 0.08
+  },
+  "Pleural Other": {
+   "detected": 0.109,
+   "borderline": 0.065
+  },
+  "Fracture": {
+   "detected": 0.101,
+   "borderline": 0.061
+  },
+  "Support Devices": {
+   "detected": 0.139,
+   "borderline": 0.083
+  },
+  "No Finding": {
+   "detected": 0.413,
+   "borderline": 0.308
+  }
+ },
+ "target_specificity": 0.95
+}
