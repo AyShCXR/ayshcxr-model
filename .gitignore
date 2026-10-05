@@ -74,6 +74,7 @@ _*.png
 doc_backups/
 readme_upload/
 REORG_MANIFEST.csv
+.claude/launch.json
 
 # ── Archive — internal history, not for publication ─────────────────────────
 # archive/snapshot_2026-08-04/ is a frozen copy of the project as it was on

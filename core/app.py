@@ -304,7 +304,7 @@ def validate_xray(img_pil):
 # It has not been called since registry-driven loading replaced it below.
 # Deleted rather than left in place because a second, stale loader sitting in
 # the file is exactly the kind of thing that gets accidentally re-enabled.
-# The old version is in archive/backups/ if it is ever needed.
+# The old version is kept in the authors' private archive (not published).
 
 # ── REGISTRY-DRIVEN LOADING — 2026-08-10 ────────────────────────────────────
 # The old load_model() knew one architecture, one input size and one label set,

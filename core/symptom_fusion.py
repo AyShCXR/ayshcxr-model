@@ -3,7 +3,7 @@
 # by Subhrakant Sethi & Ayush Singh
 #
 # WHY THIS EXISTS
-#   The FiLM model (archive/superseded/train_symptom_fusion.py) scored 0.9085 val
+#   The FiLM model (train_symptom_fusion.py, since retired; not published) scored 0.9085 val
 #   AUC, and that number was meaningless: its symptom vectors were GENERATED FROM
 #   THE DISEASE LABELS via SYMPTOM_PREVALENCE_BY_DISEASE, so the input contained
 #   the answer. With uninformative symptoms the same model scored 0.6878 — worse
