@@ -35,3 +35,7 @@ tqdm>=4.66
 # ── training only (not needed to run the app) ───────────────────────────────
 # iterative-stratification==0.1.9    multilabel stratified splits
 # matplotlib>=3.9                    ROC curves and figures
+
+# ── tests (tests/, CPU only, no weights or datasets) ────────────────────────
+#   python -m pytest tests -v
+pytest>=8.0
