@@ -23,3 +23,10 @@ def test_temperature_scaling_keeps_highest_ranked_case_and_order():
     cal = np.array([calib.calibrate("Cardiomegaly", p, path=CALIB_FILE) for p in raw])
     assert np.argmax(cal) == np.argmax(raw)
     assert np.array_equal(np.argsort(cal), np.argsort(raw))
+
+
+def test_effusion_is_calibrated_under_its_canonical_name():
+    # The app asks for "Effusion"; the file stores "Pleural Effusion" — both must be calibrated.
+    assert calib.calibrate("Effusion", 0.6, path=CALIB_FILE) != 0.6
+    assert calib.calibrate("Effusion", 0.6, path=CALIB_FILE) == \
+        calib.calibrate("Pleural Effusion", 0.6, path=CALIB_FILE)
