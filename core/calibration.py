@@ -29,8 +29,6 @@ import json
 import os
 import numpy as np
 
-from disease_ontology import safe_to_canonical
-
 CALIB_PATH = "results/calibration.json"
 EPS = 1e-6
 
@@ -137,11 +135,7 @@ def load(path=CALIB_PATH):
     if _TEMPS is None:
         try:
             with open(path, encoding="utf-8") as f:
-                raw = json.load(f)["temperatures"]
-            # the file is fitted under CheXpert spellings ("Pleural Effusion")
-            # but the app looks findings up by canonical name ("Effusion");
-            # without this, those findings were silently left uncalibrated
-            _TEMPS = {safe_to_canonical(k) or k: t for k, t in raw.items()}
+                _TEMPS = json.load(f)["temperatures"]
         except Exception:
             _TEMPS = {}
     return _TEMPS
@@ -150,7 +144,7 @@ def load(path=CALIB_PATH):
 def calibrate(disease, prob, path=CALIB_PATH):
     """Apply the fitted temperature. Unknown findings pass through unchanged —
     never guess a correction you have not measured."""
-    t = load(path).get(safe_to_canonical(disease) or disease)
+    t = load(path).get(disease)
     if not t or abs(t - 1.0) < 1e-3:
         return float(prob)
     return float(_sigmoid(_logit(np.array([prob])) / t)[0])
