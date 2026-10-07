@@ -135,6 +135,14 @@ def should_abstain(probability, uncertainty, disease=None):
     p = float(probability)
     u = float(uncertainty or 0.0)
 
+    # NaN compares False against every threshold below, so without this check
+    # a broken output would fall through to "answer" — the least safe outcome.
+    if not (np.isfinite(p) and np.isfinite(u)):
+        return {"abstain": True, "level": "high",
+                "reason": "Model output was not a valid number, so no "
+                          "conclusion can be drawn from it.",
+                "action": "Refer for radiologist review — do not rely on this result."}
+
     if u >= VERY_UNCERTAIN:
         return {"abstain": True, "level": "high",
                 "reason": f"Model output varied widely across repeated passes "
