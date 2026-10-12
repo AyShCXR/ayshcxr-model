@@ -125,12 +125,22 @@ BORDERLINE_LO   = 0.35      # probability band where the model is least decisive
 BORDERLINE_HI   = 0.65
 
 
-def should_abstain(probability, uncertainty, disease=None):
+def should_abstain(probability, uncertainty, disease=None, quality_severity=None):
     """Decide whether the system should decline to commit.
 
-    Two independent triggers:
+    Triggers, evaluated in order:
       * high spread across MC-Dropout passes — the model disagrees with itself
-      * probability sitting in the indecisive middle band with elevated spread
+      * probability in the indecisive middle band with elevated spread
+      * (NEW) the film's technique compromises THIS finding — see below
+
+    quality_severity: 'severe' | 'warn' | None for this finding on this film,
+    from image_quality.affected_severity(). Default None reproduces the original
+    two-trigger behaviour exactly, so existing 2- and 3-argument callers are
+    unaffected. The quality triggers are placed AFTER the uncertainty triggers:
+    they exist to catch the case the uncertainty triggers cannot — a model that
+    is confidently wrong on a technically bad film (low MC spread on a rotated or
+    over-penetrated image). When the model is already flagged uncertain the
+    earlier triggers fire first and this code is never reached.
     """
     p = float(probability)
     u = float(uncertainty or 0.0)
@@ -157,19 +167,41 @@ def should_abstain(probability, uncertainty, disease=None):
                 "action": "Clinical correlation required; consider referral or "
                           "repeat imaging."}
 
+    if quality_severity == "severe":
+        name = f" ({disease})" if disease else ""
+        return {"abstain": True, "level": "quality",
+                "reason": f"A technical fault on this film compromises this "
+                          f"finding{name}. It is unreliable here regardless of how "
+                          f"confident the model appears.",
+                "action": "Repeat the radiograph with correct technique, or refer "
+                          "for radiologist review."}
+
+    if quality_severity == "warn" and BORDERLINE_LO <= p <= BORDERLINE_HI:
+        return {"abstain": True, "level": "quality_borderline",
+                "reason": f"Result is borderline ({p*100:.0f}%) and the film has a "
+                          f"technical issue affecting this finding.",
+                "action": "Clinical correlation required; consider repeat imaging."}
+
     return {"abstain": False, "level": "none", "reason": None, "action": None}
 
 
-def panel_abstention(predictions):
+def panel_abstention(predictions, quality_severities=None):
     """Whole-study verdict.
 
     If the top findings are all uncertain, the STUDY is unreadable by the
     system, not merely one finding — that is a different and more important
     message for the health worker.
+
+    quality_severities: optional {finding: 'warn'|'severe'} from
+    image_quality.affected_severity(), threaded into each per-finding
+    should_abstain call. Default None reproduces the original behaviour exactly.
     """
+    qsev = quality_severities or {}
     tops = sorted(predictions, key=lambda p: -p.get("probability", 0))[:3]
     flags = [should_abstain(p.get("probability", 0), p.get("uncertainty", 0),
-                            p.get("disease")) for p in tops]
+                            p.get("disease"),
+                            quality_severity=qsev.get(p.get("disease")))
+             for p in tops]
     high = sum(1 for f in flags if f["abstain"] and f["level"] == "high")
     any_ab = sum(1 for f in flags if f["abstain"])
 
@@ -180,6 +212,45 @@ def panel_abstention(predictions):
                 "per_finding": flags}
     return {"abstain": False, "level": "none", "message": None,
             "per_finding": flags}
+
+
+# ── 2b. UNCERTAINTY KIND ─────────────────────────────────────────────────────
+# model_loader.predict() already decomposes uncertainty into two components:
+#     within  — mean MC-Dropout spread across models ("is each model itself sure?")
+#     between — std of the per-model means          ("do the models agree?")
+# and then combines them into one scalar for the abstention decision. The two
+# carry DIFFERENT clinical meaning, and collapsing them discards it:
+#     between dominates -> the models DISAGREE with one another
+#     within  dominates -> each model is INTERNALLY UNSTABLE on this image
+# This classifies the dominant source so the UI can say which it is. It is a
+# DISPLAY aid only: the abstention decision still uses the combined scalar, so
+# nothing about should_abstain / panel_abstention changes.
+DISAGREE_RATIO = 1.5    # one component must exceed the other by this factor to
+                        # be called the dominant source; otherwise it is "mixed"
+
+
+def uncertainty_kind(within, between):
+    """Classify the dominant source of a finding's uncertainty for display.
+
+    Returns {"kind", "within", "between", "detail"} with kind one of
+    'stable' | 'models_disagree' | 'model_unstable' | 'mixed'. Never raises.
+    """
+    w = float(within or 0.0)
+    b = float(between or 0.0)
+    total = (w ** 2 + b ** 2) ** 0.5
+    if total < UNCERTAIN_STD:
+        kind, detail = "stable", "Models are stable and agree on this finding."
+    elif b >= DISAGREE_RATIO * max(w, 1e-6):
+        kind, detail = "models_disagree", ("The models disagree with each other "
+                                           "on this finding.")
+    elif w >= DISAGREE_RATIO * max(b, 1e-6):
+        kind, detail = "model_unstable", ("Individual models are unstable across "
+                                          "repeated passes on this image.")
+    else:
+        kind, detail = "mixed", ("Both inter-model disagreement and within-model "
+                                 "instability are present.")
+    return {"kind": kind, "within": round(w, 4), "between": round(b, 4),
+            "detail": detail}
 
 
 # ── self-test ───────────────────────────────────────────────────────────────
@@ -226,6 +297,35 @@ if __name__ == "__main__":
         r = should_abstain(p, u)
         verdict = f"ABSTAIN ({r['level']})" if r["abstain"] else "answer"
         print(f"  p={p:.2f} ±{u:.2f}  {label:24s} -> {verdict}")
+
+    print("\nQUALITY-CONDITIONED ABSTENTION (A2)")
+    for p, u, q, label in [(0.91, 0.02, "severe", "confident, but film ruined"),
+                           (0.91, 0.02, None,     "confident, good film"),
+                           (0.50, 0.03, "warn",   "borderline + minor fault"),
+                           (0.91, 0.02, "warn",   "confident + minor fault")]:
+        r = should_abstain(p, u, "Cardiomegaly", quality_severity=q)
+        verdict = f"ABSTAIN ({r['level']})" if r["abstain"] else "answer"
+        print(f"  p={p:.2f} ±{u:.2f} quality={str(q):6s} {label:28s} -> {verdict}")
+    # backward compatibility: no quality signal == original behaviour
+    assert should_abstain(0.91, 0.02)["abstain"] is False
+    assert should_abstain(0.55, 0.20)["abstain"] is True
+    # the headline case: confidently wrong on a technically bad film is now caught
+    assert should_abstain(0.91, 0.02, "Cardiomegaly",
+                          quality_severity="severe")["abstain"] is True
+    # a minor fault alone, on a confident reading, does NOT abstain
+    assert should_abstain(0.91, 0.02, "Cardiomegaly",
+                          quality_severity="warn")["abstain"] is False
+
+    print("\nUNCERTAINTY KIND (B2)")
+    for w, b, label in [(0.01, 0.01, "stable"),
+                        (0.02, 0.18, "models disagree"),
+                        (0.18, 0.02, "model unstable"),
+                        (0.12, 0.12, "mixed")]:
+        k = uncertainty_kind(w, b)
+        print(f"  within={w:.2f} between={b:.2f}  {label:16s} -> {k['kind']}")
+    assert uncertainty_kind(0.02, 0.18)["kind"] == "models_disagree"
+    assert uncertainty_kind(0.18, 0.02)["kind"] == "model_unstable"
+    assert uncertainty_kind(0.0, 0.0)["kind"] == "stable"
 
     print("\nWHOLE-STUDY VERDICT")
     unreadable = [{"disease": "Pneumonia", "probability": 0.55, "uncertainty": 0.18},

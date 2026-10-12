@@ -207,10 +207,17 @@ def covered_findings(loaded):
 
 
 @torch.no_grad()
-def predict(loaded, img_pil, device="cpu", mc_passes=0):
+def predict(loaded, img_pil, device="cpu", mc_passes=0, out_components=None):
     """Run every loaded model and merge by canonical name.
 
     Returns (merged_probs, per_model, uncertainty).
+
+    out_components: optional dict. If provided, it is filled in place with
+    {finding: {"within": w, "between": b}} — the two uncertainty components that
+    are otherwise collapsed into the scalar `uncertainty[finding]`. This is purely
+    additive: the return value, its arity, and the float type of `uncertainty`
+    are unchanged, so every existing caller is unaffected. Callers that want the
+    decomposition (clinical_extras.uncertainty_kind) pass a dict and read it back.
 
     ── UNCERTAINTY: TWO SOURCES, PROPERLY COMBINED ────────────────────────────
     An earlier version took uncertainty[finding] = max(per-model MC spread),
@@ -278,6 +285,8 @@ def predict(loaded, img_pil, device="cpu", mc_passes=0):
         # population std: with one model there is no disagreement to measure
         between = float(np.std(means)) if len(means) > 1 else 0.0
         uncertainty[c] = float(np.sqrt(within ** 2 + between ** 2))
+        if out_components is not None:
+            out_components[c] = {"within": within, "between": between}
 
     # NOTE ON WEIGHTS: these are member AUCs — 0.8281 / 0.8238 / 0.8226 / 0.8031.
     # A 3% spread means this is very nearly an unweighted mean, and it is not
@@ -334,12 +343,23 @@ if __name__ == "__main__":
 
         from PIL import Image
         dummy = Image.new("RGB", (512, 512), (110, 110, 110))
-        merged, per_model, unc = predict(loaded, dummy, dev, mc_passes=0)
+        comps = {}
+        merged, per_model, unc = predict(loaded, dummy, dev, mc_passes=0,
+                                         out_components=comps)
         print(f"\nforward pass on a dummy image -> {len(merged)} findings")
         for d, p in list(merged.items())[:5]:
             print(f"   {d:28s} {p:.4f}")
         assert all(0.0 <= v <= 1.0 for v in merged.values()), "probs out of range"
         print("\n  probabilities in range, mapping by canonical name confirmed")
+
+        # out_components (B1): must populate and reconstruct the scalar exactly
+        assert comps and set(comps) == set(unc), "components must cover every finding"
+        import math as _math
+        for d, c in comps.items():
+            recon = _math.sqrt(c["within"] ** 2 + c["between"] ** 2)
+            assert abs(recon - unc[d]) < 1e-9, f"component mismatch for {d}"
+        print(f"  out_components populated for {len(comps)} findings and "
+              f"reconstructs the scalar uncertainty exactly")
 
     print("\n" + "=" * 70)
     print("  DONE")
