@@ -2585,6 +2585,16 @@ def predict_stage1():
         quality = {"available": False, "error": str(e)[:120],
                    "overall": "unknown", "warnings": [], "affected_findings": []}
 
+    # Per-finding quality severity {finding: 'warn'|'severe'}, folded from the
+    # assessment above. Feeds the quality-conditioned abstention below so a
+    # finding corrupted by this film's technique is withheld even when the model
+    # looks confident. Never fatal — an empty map simply disables the extra
+    # trigger and preserves the original uncertainty-only behaviour.
+    try:
+        quality_severity = _iq.affected_severity(quality)
+    except Exception:
+        quality_severity = {}
+
     # ── AI prediction ─────────────────────────────────
     # The previous fallback here was dangerous: on ANY exception it silently ran
     # the PRIMARY model alone through the old 1-channel transform, producing 14
@@ -2669,15 +2679,17 @@ def predict_stage1():
         p["single_source"] = d in SINGLE_SOURCE
         p["n_models"] = _coverage_count.get(d, 1)
         try:
-            ab = _cx.should_abstain(p["probability"], p.get("uncertainty", 0), d)
+            ab = _cx.should_abstain(p["probability"], p.get("uncertainty", 0), d,
+                                    quality_severity=quality_severity.get(d))
             p["abstain"] = ab["abstain"]
+            p["abstain_level"] = ab["level"]
             p["abstain_reason"] = ab["reason"]
             p["abstain_action"] = ab["action"]
         except Exception:
             p["abstain"] = False
 
     try:
-        study_verdict = _cx.panel_abstention(predictions)
+        study_verdict = _cx.panel_abstention(predictions, quality_severity)
     except Exception:
         study_verdict = {"abstain": False, "message": None}
 

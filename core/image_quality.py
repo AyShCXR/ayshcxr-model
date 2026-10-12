@@ -292,6 +292,37 @@ def _summary(overall, warnings):
             f"Interpret the affected findings with caution.")
 
 
+# ── per-finding quality severity ─────────────────────────────────────────────
+# assess() already returns the flat `affected_findings` list and the per-check
+# `warnings` (each carrying its own severity). This folds the two together into
+# {finding: worst severity} so the abstention logic can ask one question —
+# "is THIS finding compromised on THIS film, and how badly?" — without re-running
+# any check. It reads assess() output only and never raises: an unavailable
+# assessment yields {}, so a caller can treat "no quality signal" uniformly.
+_SEVERITY_ORDER = {"warn": 1, "severe": 2}
+
+
+def affected_severity(assessment):
+    """Map an assess() result to {finding: 'warn'|'severe'}.
+
+    Only findings whose reading is compromised by a flagged fault appear; a
+    finding absent from the dict is unaffected on this film. Where two faults hit
+    the same finding (e.g. rotation + exposure both affect Effusion) the worse
+    severity wins.
+    """
+    out = {}
+    if not assessment or not assessment.get("available"):
+        return out
+    for w in assessment.get("warnings", []):
+        sev = w.get("severity")
+        if sev not in _SEVERITY_ORDER:
+            continue
+        for finding in AFFECTED_BY.get(w.get("check"), []):
+            if _SEVERITY_ORDER[sev] > _SEVERITY_ORDER.get(out.get(finding), 0):
+                out[finding] = sev
+    return out
+
+
 # ── self-test ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import sys, os, glob
@@ -354,6 +385,14 @@ if __name__ == "__main__":
     # must never raise
     bad = assess("not an image")
     print(f"\nnon-image input -> available={bad['available']} (no exception) OK")
+
+    # per-finding severity folding (A1)
+    print("\nPER-FINDING QUALITY SEVERITY  (affected_severity)")
+    for title, im in (("over-penetrated", dark), ("asymmetric/rotated", rot)):
+        sev = affected_severity(assess(Image.fromarray((im * 255).astype(np.uint8))))
+        print(f"  {title:20s} -> {sev if sev else '(none)'}")
+    assert affected_severity(bad) == {}, "unavailable assessment must map to {}"
+    assert affected_severity(None) == {}, "None must map to {}"
 
     print("\n" + "=" * 70)
     print("  DONE")

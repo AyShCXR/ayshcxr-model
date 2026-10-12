@@ -99,24 +99,33 @@ def analyse(paths, symptoms=None, occupation="", conditions="", smoking="",
             continue
 
         quality = iq.assess(img)
-        merged, per_model, unc = ml.predict(loaded, img, dev, mc_passes=mc_passes)
+        qsev = iq.affected_severity(quality)          # {finding: 'warn'|'severe'}
+        unc_components = {}                           # filled in place by predict()
+        merged, per_model, unc = ml.predict(loaded, img, dev, mc_passes=mc_passes,
+                                            out_components=unc_components)
         merged = cal.calibrate_all(merged)
 
         fused = bayes_fuse(merged, answered, risk_lrs=risk_lrs)
         preds = []
         for d, r in fused.items():
+            uc = unc_components.get(d, {})
             preds.append({
                 "disease": d,
                 "probability": round(r["posterior"], 4),
                 "image_only": round(r["prior"], 4),
                 "uncertainty": round(float(unc.get(d, 0.0)), 4),
+                "uncertainty_kind": cx.uncertainty_kind(
+                    uc.get("within"), uc.get("between"))["kind"],
                 "is_pathology": mkext.is_pathology(d),
             })
 
         ranked = cx.rank_by_salience(preds, baselines)
         for p in ranked:
-            ab = cx.should_abstain(p["probability"], p["uncertainty"], p["disease"])
+            ab = cx.should_abstain(p["probability"], p["uncertainty"], p["disease"],
+                                   quality_severity=qsev.get(p["disease"]))
             p["abstain"] = ab["abstain"]
+            p["abstain_level"] = ab["level"]
+            p["abstain_reason"] = ab["reason"]
             p["threshold"] = (thresholds.get(p["disease"]) or {}).get("detected")
             p["flagged"] = (p["threshold"] is not None
                             and p["probability"] >= p["threshold"])
@@ -127,7 +136,7 @@ def analyse(paths, symptoms=None, occupation="", conditions="", smoking="",
             "models": [e["id"] for e in loaded],
             "quality": quality["overall"],
             "quality_warnings": [w["check"] for w in quality.get("warnings", [])],
-            "study_abstain": cx.panel_abstention(ranked)["abstain"],
+            "study_abstain": cx.panel_abstention(ranked, qsev)["abstain"],
             "findings": ranked,
         }
 
@@ -152,7 +161,7 @@ def print_human(res):
     print("  " + "-" * 60)
     for f in path[:8]:
         mark = " ⚑" if f["flagged"] else "  "
-        ab = " ABSTAIN" if f["abstain"] else ""
+        ab = f" ABSTAIN[{f.get('abstain_level', '')}]" if f["abstain"] else ""
         print(f"  {f['disease']:<28}{f['probability']:>7.3f}"
               f"{f['uncertainty']:>7.3f}{f['salience']:>10.2f}{mark}{ab}")
 
