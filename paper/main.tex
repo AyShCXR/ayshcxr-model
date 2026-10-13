@@ -1,0 +1,283 @@
+% main.tex — AyShCXR, AIDL-HCSY 2027 (IEEE conference format, max 6 pages)
+% Compile on Overleaf: upload the paper/ folder as a zip, set main.tex as the
+% main document, press Recompile.
+%
+% RULE FOR THIS DRAFT: no result number is typed by hand from memory. Every
+% \TBD{} is filled only from a results/*.csv file, and the source is noted in a
+% comment next to it.
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{url}
+
+% visible placeholder: anything red is NOT finished
+\newcommand{\TBD}[1]{\textcolor{red}{[#1]}}
+
+% conference rule: no headers, footers or page numbers
+\pagestyle{empty}
+
+\begin{document}
+
+\title{Withholding What the Film Cannot Support:\\
+Quality-Conditioned Per-Finding Abstention for\\
+Multi-Label Chest X-Ray Triage}
+
+% Metadata cannot be changed after final submission: confirm names, order,
+% affiliations and whether mentors are co-authors before submitting.
+\author{
+\IEEEauthorblockN{Subhrakant Sethi}
+\IEEEauthorblockA{\textit{Department of Biotechnology} \\
+\textit{Thapar Institute of Engineering and Technology}\\
+Patiala, India \\
+ssethi\_btech24@thapar.edu}
+\and
+\IEEEauthorblockN{Ayush Singh}
+\IEEEauthorblockA{\textit{Department of Biotechnology} \\
+\textit{Thapar Institute of Engineering and Technology}\\
+Patiala, India \\
+asingh3\_btech24@thapar.edu}
+}
+
+\maketitle
+\thispagestyle{empty}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{abstract}
+Chest radiographs acquired in primary health centres are often technically
+poor: rotated, over- or under-exposed, or blurred. Such faults can make a
+deep-learning reader confidently wrong, for example reporting cardiomegaly on a
+rotated film. Existing selective-prediction methods for chest X-rays abstain
+when the \emph{model} is uncertain, but a degraded film does not necessarily
+make the model uncertain. We propose \emph{quality-conditioned per-finding
+abstention}: a training-free policy that measures the technical quality of each
+film and withholds only those findings that the detected fault is known to
+corrupt, leaving the rest of the report intact. On a four-model ensemble
+(DenseNet-121, EfficientNet-B4, RAD-DINO, and an NIH-trained DenseNet), under
+controlled degradations of NIH ChestX-ray14 test films, uncertainty-based
+abstention caught \TBD{x}\% of degradation-induced errors, whereas the
+quality-conditioned policy caught \TBD{y}\% at \TBD{equal or better} residual
+risk on held-out films. On \TBD{N} real test films, findings that the quality
+module marks as compromised \TBD{showed / did not show} a measurable loss of
+discrimination. The method needs no retraining and applies to any frozen
+classifier.
+\end{abstract}
+
+\begin{IEEEkeywords}
+chest radiography, selective prediction, abstention, image quality,
+uncertainty, deep ensembles, clinical decision support
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction}
+
+India has roughly one radiologist per 100{,}000 people, and far fewer in rural
+primary health centres (PHCs), where chest radiography is the main imaging
+test for tuberculosis, pneumonia, effusion and cardiomegaly. Automated readers
+trained on large public datasets \cite{wang2017chestxray8,irvin2019chexpert}
+could fill part of this gap, but PHC films are frequently technically poor:
+older equipment, briefly trained operators, and patients who cannot hold
+position or breath.
+
+A technical fault does not simply add noise; it can \emph{manufacture} or
+\emph{hide} specific findings. Rotation widens the projected cardiac
+silhouette and mimics cardiomegaly; under-penetration whitens the lung fields
+and mimics infiltration; over-penetration and blur erase small nodules. A
+classifier has no notion of this and may report the artefact with high
+confidence.
+
+The standard safeguard is selective prediction \cite{geifman2017selective}:
+abstain when the model is uncertain. For chest X-rays this has been done with
+entropy- and confidence-interval-based rejection per pathology
+\cite{aperstein2025rejection}. But uncertainty and image quality are different
+quantities. When a fault produces a plausible-looking but wrong image, every
+ensemble member can agree, and no uncertainty-based rule fires. Recent theory
+makes the same point for covariate shift in general \cite{heng2026abstain}.
+
+\textbf{Contributions.}
+\begin{itemize}
+\item A training-free, \emph{per-finding} abstention policy that conditions on
+measured film quality: a fault withholds only the findings it physically
+corrupts, so a rotated film still reports pneumothorax.
+\item A controlled comparison showing how many degradation-induced errors
+uncertainty-based abstention misses on a four-model ensemble, with the policy
+chosen on one half of the films and reported on the other.
+\item Real-film evidence: on NIH test films, an analysis of whether the faults
+the quality module detects in practice degrade the findings it claims they
+degrade, controlled for view position.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Related Work}
+
+\textbf{Selective prediction for chest X-rays.} Aperstein et
+al.~\cite{aperstein2025rejection} add entropy- and confidence-interval-based
+rejection to a DenseNet-121 classifier with global or class-specific
+thresholds. Their rejection signal is model uncertainty only. We use their
+setting as the baseline that our policy extends.
+
+\textbf{Quality gating.} Diabetic-retinopathy screening systems routinely
+reject a whole image as ``ungradable''. TRUST-CXR \cite{salam2026trustcxr}
+combines image-quality metrics with calibrated DenseNet-121 outputs in a
+reliability-aware workflow for a single task, tuberculosis. In both cases the
+decision is made for the whole image. Ours is made per finding in a
+multi-label reader, so a fault that corrupts cardiac size does not suppress an
+unrelated pneumothorax.
+
+\textbf{Quality-aware diagnosis.} Che et al.~\cite{che2023qualityaware} use
+image-quality labels during \emph{training} to make diagnosis more robust to
+degradation. Zhu et al.~\cite{zhu2026lowquality} train report generators to be
+quality-agnostic. Both change the model. Our policy abstains instead, needs no
+retraining, and applies to any frozen classifier.
+
+\textbf{Chest X-ray technical assessment.} Deep and classical methods estimate
+rotation \cite{sun2024rotation} and overall technical adequacy
+\cite{meng2022cxrquality} for quality assurance and retake decisions. These
+estimators are complementary to our work: any of them could replace our
+lightweight quality module as the input to the abstention policy.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Method}
+
+\subsection{Classifier ensemble and uncertainty}
+Four frozen classifiers are combined: DenseNet-121 \cite{huang2017densenet} and
+EfficientNet-B4 \cite{tan2019efficientnet} with dual average/max pooling and
+RAD-DINO \cite{perezgarcia2025raddino}, all trained on CheXpert Plus
+\cite{chambon2024chexpertplus}, plus a DenseNet-121 trained on NIH
+ChestX-ray14 \cite{wang2017chestxray8}. Outputs are merged by canonical finding
+name with weights proportional to each model's validation AUC, then calibrated
+by per-finding temperature scaling \cite{guo2017calibration}. Uncertainty for
+finding $f$ combines the mean Monte-Carlo-dropout spread within models
+\cite{gal2016dropout} and the spread of model means across the ensemble
+\cite{lakshminarayanan2017ensembles}:
+\begin{equation}
+u_f = \sqrt{\bar{\sigma}_{\text{within},f}^{2} + \sigma_{\text{between},f}^{2}} .
+\end{equation}
+A finding is reported positive when its calibrated probability exceeds a
+per-finding threshold set at a target specificity on healthy films.
+\TBD{state: thresholds tuned on 300 healthy NIH films; the 420 test films that
+overlap the tuning sample are excluded from every evaluation.}
+
+\subsection{Film quality assessment}
+Three checks are computed from image statistics, without any extra network:
+\emph{rotation} (left--right asymmetry of lung-field darkness about an
+estimated midline), \emph{exposure} (mean intensity, contrast and clipping),
+and \emph{sharpness} (variance of the Laplacian). Thresholds were set at
+population percentiles of 400 real VinDr-CXR radiographs: \emph{warn} at about
+the 5th/95th percentile and \emph{severe} at about the 1st/99th. A fourth check,
+inspiration depth, was disabled because the heuristic located the image border
+instead of the diaphragm in a large fraction of films. The rotation check
+responds to asymmetry, which large unilateral disease also produces; we return
+to this in Section~\ref{sec:limits}.
+
+\subsection{Fault-to-finding map}
+Each check $c$ is linked to the findings it can corrupt, $A(c)$, following
+standard radiographic reasoning: rotation affects cardiac size, mediastinal
+width, effusion, atelectasis and pneumothorax; exposure affects nodule, mass,
+infiltration, pneumothorax and emphysema; blur affects nodule, mass and
+fibrosis. For a film, finding $f$ receives severity
+$s_f = \max\{\text{sev}(c) : f \in A(c)\}$, or none.
+\TBD{if A3 is done: compare this map with the per-fault AUC drops measured on
+real films.}
+
+\subsection{Abstention policies}
+Let $p_f$ be the calibrated probability and $u_f$ the uncertainty.
+\begin{itemize}
+\item \textbf{Uncertainty-only} (baseline): abstain if $u_f \ge 0.16$, or if
+$u_f \ge 0.10$ and $p_f$ is borderline, $0.35 \le p_f \le 0.65$.
+\item \textbf{Quality, all calls}: additionally abstain if $s_f$ is severe, or if
+$s_f$ is warn and $p_f$ is borderline.
+\item \textbf{Quality, positive calls}: apply the quality rule only when the
+finding is called positive, i.e.\ withhold a positive the film cannot support
+and report it as ``cannot confirm on this film''.
+\end{itemize}
+No policy has a parameter fitted to the evaluation data: all thresholds are
+fixed in the deployed code before the experiments.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Experiments}
+
+\subsection{Controlled degradations}
+\TBD{N} NIH ChestX-ray14 test films are degraded with four faults at two
+severities: over-penetration, under-penetration, Gaussian blur and in-plane
+rotation. A decision $(\text{film},f)$ is an \emph{induced error} if $f$ is read
+correctly on the clean film and incorrectly on the degraded one. For each
+policy we report coverage, residual risk (error rate among reported findings),
+and induced errors caught, and compare against uncertainty-ranked abstention at
+the \emph{same} coverage. Films are split at random into two halves: the policy
+is chosen on half~A by a rule fixed in advance, and all reported numbers come
+from half~B. Confidence intervals resample films (1000 bootstrap replicates),
+since the 14 findings of one film are not independent.
+
+\subsection{Real films}
+The quality module is run on all \TBD{25{,}176} NIH test films. For each check
+and finding, discrimination (AUC) is compared between films flagged by that
+check and films that pass every check, separately for PA and AP views, because
+technically poor films are disproportionately portable AP studies of sicker
+patients. Intervals resample patients.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Results}
+
+\begin{table}[t]
+\caption{Abstention policies on held-out films (half~B, controlled
+degradations). ``Unc.\ @ same cov.'' is uncertainty-ranked abstention at the
+policy's coverage.}
+\label{tab:policies}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Policy & Cov. & Risk & Induced caught & Unc.\ @ same cov. \\
+\midrule
+None              & 1.00 & \TBD{} & 0 & -- \\
+Uncertainty-only  & \TBD{} & \TBD{} & \TBD{} & -- \\
+Quality, all      & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
+Quality, positive & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
+Combined, all     & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
+Combined, positive& \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
+\bottomrule
+\end{tabular}
+% source: results/quality_policy_summary.csv (split == "B")
+\end{table}
+
+\TBD{Text: which policy the half-A rule selected, its half-B numbers with 95\%
+CIs, per-fault breakdown, abstention rate on clean films.}
+
+\TBD{Figure: induced errors caught vs.\ coverage, quality vs.\ uncertainty,
+black-and-white safe, saved as EPS/PDF.}
+
+\TBD{Table/figure: real-film AUC drop by check and finding, PA and AP; whether
+affected findings drop more than unaffected ones.}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Discussion and Limitations}\label{sec:limits}
+\begin{itemize}
+\item \textbf{Synthetic faults.} The controlled experiment uses simulated
+degradations; the real-film analysis is observational and can be confounded
+by patient acuity even within a view position.
+\item \textbf{Heuristic quality module.} The checks are image statistics, not
+anatomical landmark detection. The rotation check responds to any left--right
+asymmetry, including large effusions and collapse, so on real films a rotation
+flag partly reflects disease.
+\item \textbf{Labels.} NIH labels are mined automatically from reports and are
+noisy \cite{smit2020chexbert,jain2021visualchexbert}; this limits every
+error-based metric in this paper.
+\item \textbf{Coverage cost.} Withholding findings shifts work to clinicians;
+the abstention rate on clean films is reported for this reason.
+\item \textbf{Not a diagnostic device.} The system is decision support and has
+not been validated prospectively in a PHC.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+\TBD{Two or three sentences, written last, stating only what the half-B and
+real-film results support.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

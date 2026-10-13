@@ -1,0 +1,19 @@
+{
+  "source": "NIH ChestX-ray14 train_val split, unlabeled",
+  "n_films": 2000,
+  "seed": 7,
+  "rule": "warn ~ p5/p95, severe ~ p1/p99 (same as image_quality.py)",
+  "thresholds": {
+    "ROTATION_WARN": 0.231515,
+    "ROTATION_SEVERE": 0.35353799999999985,
+    "DARK_MEAN": 0.38609,
+    "DARK_MEAN_SEVERE": 0.322277,
+    "BRIGHT_MEAN": 0.661035,
+    "BRIGHT_MEAN_SEVERE": 0.696607,
+    "LOW_CONTRAST_STD": 0.152795,
+    "BLUR_LAPLACIAN": 3.9695,
+    "BLUR_SEVERE": 2.7096,
+    "DARK_CLIP_WARN": 0.15676999999999994,
+    "BRIGHT_CLIP_WARN": 0.0015
+  }
+}
