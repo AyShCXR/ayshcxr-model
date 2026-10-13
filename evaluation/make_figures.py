@@ -102,7 +102,9 @@ def fig_real(summary, view="PA"):
     if not checks:
         print("  no real-film rows to plot")
         return
-    fig, axes = plt.subplots(1, len(checks), figsize=(COL_W * 2.05, 2.6), sharey=True)
+    # common x-scale so a given AUC drop looks the same size in every panel
+    fig, axes = plt.subplots(1, len(checks), figsize=(COL_W * 2.05, 2.6),
+                             sharey=True, sharex=True)
     axes = np.atleast_1d(axes)
     findings = sorted(r["finding"].unique())
     ypos = {f: i for i, f in enumerate(findings)}

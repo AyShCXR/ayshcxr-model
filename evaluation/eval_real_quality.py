@@ -173,6 +173,21 @@ def stage_predict(max_clean, seed):
 
 
 # ── stage 3: analysis ─────────────────────────────────────────────────────────
+def _patient_resamples(pids, reps, rng):
+    """`reps` patient-level bootstrap resamples, each an array of row indices.
+    Patients are drawn with replacement and all of a patient's films come along."""
+    pids = np.asarray(pids)
+    order = np.argsort(pids, kind="stable")
+    _, start, count = np.unique(pids[order], return_index=True, return_counts=True)
+    out = []
+    for _ in range(reps):
+        pick = rng.integers(0, len(start), len(start))
+        st, ln = start[pick], count[pick]
+        offs = np.arange(ln.sum()) - np.repeat(np.cumsum(ln) - ln, ln)
+        out.append(order[np.repeat(st, ln) + offs])
+    return out
+
+
 def _auc(y, s):
     from sklearn.metrics import roc_auc_score
     y = np.asarray(y)
@@ -217,6 +232,9 @@ def stage_analyze(boot, seed, q_in, s_out):
             ref = v[~v["any_flag"]]                 # clean on EVERY check
             if len(bad) < 30:
                 continue
+            # one set of patient resamples per (check, view), shared by all findings
+            rs_b = _patient_resamples(bad["Patient ID"], boot, rng) if boot else []
+            rs_r = _patient_resamples(ref["Patient ID"], boot, rng) if boot else []
             for f in nih14:
                 y_b, s_b = bad[f].to_numpy(), bad[f"p_{f}"].to_numpy()
                 y_r, s_r = ref[f].to_numpy(), ref[f"p_{f}"].to_numpy()
@@ -228,14 +246,9 @@ def stage_analyze(boot, seed, q_in, s_out):
                 # bootstrap the AUC drop over patients
                 lo = hi = np.nan
                 if boot and np.isfinite(a_b) and np.isfinite(a_r):
-                    pb = bad["Patient ID"].unique(); pr = ref["Patient ID"].unique()
-                    gb = {p: g for p, g in bad.groupby("Patient ID")}
-                    gr = {p: g for p, g in ref.groupby("Patient ID")}
                     ds = []
-                    for _ in range(boot):
-                        sb = pd.concat([gb[p] for p in rng.choice(pb, len(pb))])
-                        sr = pd.concat([gr[p] for p in rng.choice(pr, len(pr))])
-                        d = _auc(sr[f], sr[f"p_{f}"]) - _auc(sb[f], sb[f"p_{f}"])
+                    for ib, ir in zip(rs_b, rs_r):
+                        d = _auc(y_r[ir], s_r[ir]) - _auc(y_b[ib], s_b[ib])
                         if np.isfinite(d):
                             ds.append(d)
                     if len(ds) > boot * 0.8:
