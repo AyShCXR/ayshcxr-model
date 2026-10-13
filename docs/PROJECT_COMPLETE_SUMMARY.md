@@ -119,10 +119,11 @@ Rad-DINO (`microsoft/rad-dino`, a medical vision transformer pretrained on 838K 
 | EfficientNet-B4 (380px) | 0.8164–0.8178 |
 | **Ensemble (avg of 3)** | **0.8367** |
 
-**Key finding:** three very different architectures cluster within 0.006 AUC → performance is **label-noise-limited (CheXBERT F1≈0.44 ceiling), not capacity-limited.**
+~~**Key finding:** three very different architectures cluster within 0.006 AUC → performance is label-noise-limited (CheXBERT F1≈0.44 ceiling), not capacity-limited.~~
+**Withdrawn (Oct 2026):** the F1≈0.44 figure was never measured (published CheXBERT agreement is ~0.80 report-level / ~0.55 image-level), and the controlled CV shows a 0.044 spread across architectures, so they do not converge. Only a mild diminishing-returns observation (+0.006 from the head/pooling change) survives; see `reports/label_ceiling.py`.
 
 ## 3.5 Research-paper analysis
-The user shared a 9-paper research synthesis PDF. The highest-ROI, low-risk improvement identified: **GMP+GAP dual pooling** (Paper 4 — ablation-proven ~+1% on NIH; GAP captures diffuse findings, GMP captures focal ones like nodules/pneumothorax). Other techniques (CLIP/contrastive/metric losses) deferred as too expensive for the deadline. The **label-ceiling F1=0.44** finding (Papers 2 & 6) became the central explanatory citation.
+The user shared a 9-paper research synthesis PDF. The highest-ROI, low-risk improvement identified: **GMP+GAP dual pooling** (Paper 4 — ablation-proven ~+1% on NIH; GAP captures diffuse findings, GMP captures focal ones like nodules/pneumothorax). Other techniques (CLIP/contrastive/metric losses) deferred as too expensive for the deadline. The **label-ceiling F1=0.44** finding (Papers 2 & 6) became the central explanatory citation. *(Later withdrawn: the figure was not measured by us and does not match the published literature. See §3.4 note.)*
 
 ---
 
