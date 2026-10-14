@@ -57,13 +57,14 @@ abstention}: a training-free policy that measures the technical quality of each
 film and withholds only those findings that the detected fault is known to
 corrupt, leaving the rest of the report intact. On a four-model ensemble
 (DenseNet-121, EfficientNet-B4, RAD-DINO, and an NIH-trained DenseNet), under
-controlled degradations of NIH ChestX-ray14 test films, uncertainty-based
-abstention caught \TBD{x}\% of degradation-induced errors, whereas the
-quality-conditioned policy caught \TBD{y}\% at \TBD{equal or better} residual
-risk on held-out films. On \TBD{N} real test films, findings that the quality
-module marks as compromised \TBD{showed / did not show} a measurable loss of
-discrimination. The method needs no retraining and applies to any frozen
-classifier.
+controlled degradations of NIH ChestX-ray14 test films, uncertainty-ranked
+abstention caught 4\% of degradation-induced errors at 91\% coverage, whereas
+the quality-conditioned policy caught 36\% at the same coverage and lowered the
+error rate among reported findings from 0.233 to 0.212 on held-out films. On
+25{,}176 real test films, findings the quality module flags lose discrimination
+preferentially on the findings the fault is mapped to (5 of 12 vs 1 of 26 on
+PA views; Fisher $p=0.008$). The method needs no retraining and applies to any
+frozen classifier.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -157,9 +158,9 @@ finding $f$ combines the mean Monte-Carlo-dropout spread within models
 u_f = \sqrt{\bar{\sigma}_{\text{within},f}^{2} + \sigma_{\text{between},f}^{2}} .
 \end{equation}
 A finding is reported positive when its calibrated probability exceeds a
-per-finding threshold set at a target specificity on healthy films.
-\TBD{state: thresholds tuned on 300 healthy NIH films; the 420 test films that
-overlap the tuning sample are excluded from every evaluation.}
+per-finding threshold set at a target specificity on 300 healthy NIH films.
+The 420 test films that also appear in that tuning sample are excluded from
+every evaluation below.
 
 \subsection{Film quality assessment}
 Three checks are computed from image statistics, without any extra network:
@@ -171,7 +172,12 @@ the 5th/95th percentile and \emph{severe} at about the 1st/99th. A fourth check,
 inspiration depth, was disabled because the heuristic located the image border
 instead of the diaphragm in a large fraction of films. The rotation check
 responds to asymmetry, which large unilateral disease also produces; we return
-to this in Section~\ref{sec:limits}.
+to this in Section~\ref{sec:limits}. Because these statistics depend on the
+acquisition pipeline, the percentile thresholds do not transfer between sites:
+applied unchanged to NIH films the sharpness check flags 40\% of them. We
+therefore re-derive the thresholds by the same percentile rule on unlabelled
+training films from the target corpus, which is also how a site would calibrate
+the module at deployment; this restores the intended $\sim$5\% flag rate.
 
 \subsection{Fault-to-finding map}
 Each check $c$ is linked to the findings it can corrupt, $A(c)$, following
@@ -179,9 +185,9 @@ standard radiographic reasoning: rotation affects cardiac size, mediastinal
 width, effusion, atelectasis and pneumothorax; exposure affects nodule, mass,
 infiltration, pneumothorax and emphysema; blur affects nodule, mass and
 fibrosis. For a film, finding $f$ receives severity
-$s_f = \max\{\text{sev}(c) : f \in A(c)\}$, or none.
-\TBD{if A3 is done: compare this map with the per-fault AUC drops measured on
-real films.}
+$s_f = \max\{\text{sev}(c) : f \in A(c)\}$, or none. The map is fixed in advance;
+Section~\ref{sec:results} tests it against the per-fault loss of discrimination
+measured on real films.
 
 \subsection{Abstention policies}
 Let $p_f$ be the calibrated probability and $u_f$ the uncertainty.
@@ -201,7 +207,7 @@ fixed in the deployed code before the experiments.
 \section{Experiments}
 
 \subsection{Controlled degradations}
-\TBD{N} NIH ChestX-ray14 test films are degraded with four faults at two
+395 NIH ChestX-ray14 test films are degraded with four faults at two
 severities: over-penetration, under-penetration, Gaussian blur and in-plane
 rotation. A decision $(\text{film},f)$ is an \emph{induced error} if $f$ is read
 correctly on the clean film and incorrectly on the degraded one. For each
@@ -213,45 +219,101 @@ from half~B. Confidence intervals resample films (1000 bootstrap replicates),
 since the 14 findings of one film are not independent.
 
 \subsection{Real films}
-The quality module is run on all \TBD{25{,}176} NIH test films. For each check
+The quality module is run on all 25{,}176 NIH test films. For each check
 and finding, discrimination (AUC) is compared between films flagged by that
 check and films that pass every check, separately for PA and AP views, because
 technically poor films are disproportionately portable AP studies of sicker
 patients. Intervals resample patients.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Results}
+\section{Results}\label{sec:results}
 
 \begin{table}[t]
-\caption{Abstention policies on held-out films (half~B, controlled
-degradations). ``Unc.\ @ same cov.'' is uncertainty-ranked abstention at the
-policy's coverage.}
+\caption{Abstention policies on held-out films (half~B, 198 films, controlled
+degradations, site-calibrated quality thresholds). ``Induced caught'' is out of
+556 degradation-induced errors; ``Unc.\ @ cov.'' is uncertainty-ranked
+abstention at the same coverage. ``Clean abst.'' is the fraction of findings
+withheld on undegraded films.}
 \label{tab:policies}
 \centering
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-Policy & Cov. & Risk & Induced caught & Unc.\ @ same cov. \\
+Policy & Cov. & Risk & Ind.\ caught & Unc.\ @ cov. & Clean abst. \\
 \midrule
-None              & 1.00 & \TBD{} & 0 & -- \\
-Uncertainty-only  & \TBD{} & \TBD{} & \TBD{} & -- \\
-Quality, all      & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
-Quality, positive & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
-Combined, all     & \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
-Combined, positive& \TBD{} & \TBD{} & \TBD{} & \TBD{} \\
+None               & 1.000 & 0.233 & 0   & --  & 0.000 \\
+Uncertainty-only   & 0.951 & 0.240 & 15  & 12  & 0.047 \\
+Quality, all       & 0.716 & 0.252 & 245 & 104 & 0.081 \\
+Quality, positive  & 0.954 & 0.205 & 190 & 11  & 0.014 \\
+Combined, all      & 0.677 & 0.261 & 255 & 127 & 0.126 \\
+\textbf{Combined, positive} & \textbf{0.907} & \textbf{0.212} & \textbf{201} & 22 & 0.060 \\
 \bottomrule
 \end{tabular}
-% source: results/quality_policy_summary.csv (split == "B")
+% source: results/quality_policy_records_site_summary.csv (split == "B")
 \end{table}
 
-\TBD{Text: which policy the half-A rule selected, its half-B numbers with 95\%
-CIs, per-fault breakdown, abstention rate on clean films.}
+\subsection{Controlled degradations}
+The four faults induced 556 errors on half~B. Table~\ref{tab:policies} reports
+every policy at its natural operating point. Two results stand out.
 
-\TBD{Figure: induced errors caught vs.\ coverage, quality vs.\ uncertainty,
-black-and-white safe, saved as EPS/PDF.}
+First, \textbf{uncertainty-based abstention barely responds to degradation.} At
+95\% coverage it caught 15 of 556 induced errors, and its residual risk (0.240)
+was \emph{higher} than reporting everything (0.233): the findings it withholds
+are not the ones the faults corrupted. Figure~\ref{fig:policies} shows this
+directly --- uncertainty-ranked abstention lies below the random-abstention line
+at every coverage, i.e.\ ranking by uncertainty is worse than chance at finding
+degradation-induced errors.
 
-\TBD{Table/figure: real-film AUC drop by check and finding, PA and AP; whether
-affected findings drop more than unaffected ones.}
+Second, \textbf{withholding only the positive calls the film cannot support
+both catches these errors and lowers residual risk.} The policy selected on
+half~A by the pre-specified rule was ``combined, positive''. On held-out
+half~B it reported 90.7\% of findings, caught 201 of 556 induced errors (versus
+22 for uncertainty-ranked abstention at the same coverage), and cut residual
+risk from 0.233 to 0.212 --- a change of $-0.019$ (95\% CI $[-0.025,-0.017]$,
+film-level bootstrap). It withheld 6.0\% of findings on undegraded films. The
+contrast with the ``all calls'' variants is the mechanism: withholding every
+affected finding (``quality, all'') raises residual risk to 0.252, because most
+affected findings on a bad film are still correct negatives; restricting
+abstention to positive calls removes the false findings the fault manufactured
+while keeping those negatives. Per fault, the policy was strongest on exposure
+and blur and weakest on rotation (11 of 59 and 17 of 74 mild- and
+full-rotation errors caught), tracking the sensitivity of the underlying
+quality checks. Results were materially unchanged with the original VinDr
+thresholds.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig_policies}
+\caption{Degradation-induced errors caught versus coverage on held-out films.
+The curve is uncertainty-ranked abstention swept over all coverages; markers are
+the fixed policies. Uncertainty ranking lies below the random-abstention
+diagonal; the quality policies lie well above it.}
+\label{fig:policies}
+\end{figure}
+
+\subsection{Real films}
+On 25{,}176 real test films (7{,}781 flagged by at least one check), we compared
+per-finding AUC between flagged and all-clean films within view. On PA films the
+loss of discrimination concentrated in the mapped findings: 5 of 12 mapped
+(finding, check) pairs showed a significant drop versus 1 of 26 unmapped pairs
+(Fisher one-sided $p=0.008$). The clearest cases were nodule under exposure
+($0.715\!\to\!0.611$) and blur ($0.715\!\to\!0.555$), and atelectasis, effusion
+and pneumothorax under the rotation flag ($0.80\!\to\!0.62$, $0.85\!\to\!0.76$,
+$0.88\!\to\!0.75$); see Fig.~\ref{fig:real}. The pattern held with the VinDr
+thresholds (PA $p=0.04$). Two negative results are reported in full: the effect
+did not reach significance on AP films ($p=1.0$), which are portable studies of
+sicker patients, and rotation did not produce the expected false cardiomegaly,
+consistent with our rotation check measuring asymmetry rather than true
+rotation.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{figs/fig_real_pa}
+\caption{Per-finding AUC drop (clean $-$ flagged) on real PA test films, by
+quality check. Filled markers are findings the check is mapped to; bars are 95\%
+patient-bootstrap intervals. Mapped findings carry the significant drops.}
+\label{fig:real}
+\end{figure*}
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Discussion and Limitations}\label{sec:limits}
@@ -274,8 +336,16 @@ not been validated prospectively in a PHC.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Conclusion}
-\TBD{Two or three sentences, written last, stating only what the half-B and
-real-film results support.}
+We presented a training-free, per-finding abstention policy that withholds a
+positive finding when the film's measured technical quality cannot support it.
+On controlled degradations it caught an order of magnitude more
+degradation-induced errors than uncertainty-based abstention at matched
+coverage, while lowering the error rate among reported findings; on real films,
+the loss of discrimination fell on the findings the fault map predicts. The gap
+we exploit is that image quality and model uncertainty are different quantities,
+and selective prediction has so far tracked only the latter. The policy attaches
+to any frozen classifier and needs only a few hundred unlabelled local films to
+calibrate, which suits the primary-care setting it targets.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
