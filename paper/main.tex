@@ -75,7 +75,8 @@ uncertainty, deep ensembles, clinical decision support
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Introduction}
 
-India has roughly one radiologist per 100{,}000 people, and far fewer in rural
+India has roughly one radiologist per 100{,}000
+people~\cite{chandramohan2023teleradiology}, and far fewer in rural
 primary health centres (PHCs), where chest radiography is the main imaging
 test for tuberculosis, pneumonia, effusion and cardiomegaly. Automated readers
 trained on large public datasets \cite{wang2017chestxray8,irvin2019chexpert}
@@ -237,7 +238,8 @@ abstention at the same coverage. ``Clean abst.'' is the fraction of findings
 withheld on undegraded films.}
 \label{tab:policies}
 \centering
-\small
+\setlength{\tabcolsep}{4pt}%
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
 Policy & Cov. & Risk & Ind.\ caught & Unc.\ @ cov. & Clean abst. \\
@@ -249,7 +251,7 @@ Quality, positive  & 0.954 & 0.205 & 190 & 11  & 0.014 \\
 Combined, all      & 0.677 & 0.261 & 255 & 127 & 0.126 \\
 \textbf{Combined, positive} & \textbf{0.907} & \textbf{0.212} & \textbf{201} & 22 & 0.060 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 % source: results/quality_policy_records_site_summary.csv (split == "B")
 \end{table}
 
