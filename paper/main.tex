@@ -177,7 +177,8 @@ acquisition pipeline, the percentile thresholds do not transfer between sites:
 applied unchanged to NIH films the sharpness check flags 40\% of them. We
 therefore re-derive the thresholds by the same percentile rule on unlabelled
 training films from the target corpus, which is also how a site would calibrate
-the module at deployment; this restores the intended $\sim$5\% flag rate.
+the module at deployment; this returns the sharpness check to a $\sim$3\% flag
+rate.
 
 \subsection{Fault-to-finding map}
 Each check $c$ is linked to the findings it can corrupt, $A(c)$, following
@@ -269,14 +270,14 @@ both catches these errors and lowers residual risk.} The policy selected on
 half~A by the pre-specified rule was ``combined, positive''. On held-out
 half~B it reported 90.7\% of findings, caught 201 of 556 induced errors (versus
 22 for uncertainty-ranked abstention at the same coverage), and cut residual
-risk from 0.233 to 0.212 --- a change of $-0.019$ (95\% CI $[-0.025,-0.017]$,
+risk from 0.233 to 0.212 --- a change of $-0.021$ (95\% CI $[-0.025,-0.017]$,
 film-level bootstrap). It withheld 6.0\% of findings on undegraded films. The
 contrast with the ``all calls'' variants is the mechanism: withholding every
 affected finding (``quality, all'') raises residual risk to 0.252, because most
 affected findings on a bad film are still correct negatives; restricting
 abstention to positive calls removes the false findings the fault manufactured
 while keeping those negatives. Per fault, the policy was strongest on exposure
-and blur and weakest on rotation (11 of 59 and 17 of 74 mild- and
+and blur and weakest on rotation (6 of 59 and 9 of 74 mild- and
 full-rotation errors caught), tracking the sensitivity of the underlying
 quality checks. Results were materially unchanged with the original VinDr
 thresholds.
